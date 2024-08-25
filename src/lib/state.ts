@@ -14,6 +14,7 @@ export type ModsSettings = Map<ModKey, ModSetting>
 export type AppState = {
 	search: string
 	modSettings: ModsSettings
+	view: 'search' | 'selected'
 }
 
 export function normalizeAppStateURL (url: string) : URLSearchParams {
@@ -33,6 +34,9 @@ export function appStateToUSP (state: AppState): URLSearchParams {
 	const usp = new URLSearchParams()
 	if (state.search) {
 		usp.set('search', state.search)
+	}
+	if (state.view === 'selected') {
+		usp.set('view', 'selected')
 	}
 	Array.from(state.modSettings.entries())
 		.sort(([a], [b]) => {
@@ -71,7 +75,8 @@ export function urlToAppState (urlS: string) : AppState {
 	const usp = strToUSP(urlS)
 	const state : AppState = {
 		search: usp.get('search') ?? '',
-		modSettings: new Map<ModKey, ModSetting>()
+		modSettings: new Map<ModKey, ModSetting>(),
+		view: usp.get('view') === 'selected' ? 'selected' : 'search',
 	}
 
 	MODS_LIST.forEach((mod: Mod) => {

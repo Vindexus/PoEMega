@@ -33,7 +33,6 @@ export function getTradeQuery (mods: Mod[], state: AppState): TradeQuery {
 		const include = state.modSettings.get(mod.key)?.inclusion
 		return include === 'priority' || include === 'included'
 	})
-	console.log('countedMods', countedMods)
 	const priorityMods = mods.filter((mod) => state.modSettings.get(mod.key)?.inclusion === 'priority')
 	const priorityMinCount = Math.min(3, priorityMods.length)
 
