@@ -76,17 +76,12 @@
 		}, 250)
 	}
 	
+	$: numSelectedMods = Array.from(state.modSettings.values()).filter((mod) => mod.inclusion !== 'ignored').length
 	$: filteredMods = filterMods(searchInputValue, state)
-	$: clearSearch = () => {
-		if (includedMods.length === 0) {
-			return '/'
-		}
-		const usp = new URLSearchParams()
-		for (const key of includedMods) {
-			usp.set(key, 'y')
-		}
-		return '/?' + usp.toString()
-	}
+	$: clearSearch = '/?' + appStateToUSP({
+		...state,
+		search: ''
+	}).toString()
 	$: tradeLink = getTradeLink(MODS_LIST, state)
 	const getModLink = (state: AppState, mod: Mod, include: ModInclusion) : string => {
 		const newLink = getModInclusionLink(state, mod.key, include)
@@ -106,46 +101,71 @@
 	<meta name="description" content="Find the perfect Megalomaniac for your build." />
 </svelte:head>
 
-<h1>Megalomaniac Trade Search Tool</h1>
-<p>Search for available Megalomaniac mods. You can set which ones are required, and give them a weight for sorting.</p>
-
-<form method="GET" action="/">
-	<div>
-		<input autocomplete="off" spellcheck="false" class="search" value={searchInputValue} on:input={inputSearchChanged} type="text" name="search" placeholder="Search for Megalomaniac mods" />
+<div class="top-0 sticky bg-slate-900">
+	<h1 class="text-2xl bold">Megalomaniac Trade Search Tool</h1>
+	<form method="GET" action="/" class="relative">
+		<input class="outline-none w-full text-gray-800 ps-2 pe-8 py-1" autocomplete="off" spellcheck="false" value={searchInputValue} on:input={inputSearchChanged} type="text" name="search" placeholder="Search" />
+		{#if searchInputValue}<a class="absolute right-0 top-0 h-full text-gray-600 px-2 flex items-center" href={clearSearch}>X</a>{/if}
+	</form>
+	<div class="text-sm text-gray-300 py-2 flex justify-between">
+		<div>Showing {filteredMods.length} of {MODS_LIST.length} mods.</div>
+		<div>{#if numSelectedMods}{numSelectedMods} mod{#if numSelectedMods !== 1}s{/if} selected{/if}</div>
 	</div>
-	<a href={clearSearch()}>X</a>
-</form>
-<h2>Showing {filteredMods.length} of {MODS_LIST.length} mods</h2>
-<a href={tradeLink} target="_blank" class="trade">Open Trade Link</a>
-<div>
+</div>
+
+<div class="">
 	{#each filteredMods as mod}
-		<div>
-			<h3>
-				{mod.name}
-				<em>{mod.inclusion}</em>
-				<a class={getModLinkClass(mod, 'priority')} href={getModLink(state, mod, 'priority')}>priority</a>
-				<!--<a href={getModLink(mod, 'ignored')}>ignore</a>-->
-				<a class={getModLinkClass(mod, 'excluded')} href={getModLink(state, mod, 'excluded')}>exclude</a>
-			</h3>
-			<p>{@html convertLineBreaks(mod.description)}</p>
+		<div class={"border-2 rounded px-3 py-2 mb-2 " + (mod.inclusion === 'priority' ? 'border-emerald-500 text-white' : 'text-slate-300 border-cyan-900')}>
+			<div class="flex justify-between">
+				<h3 class={"text-xl font-bold " + (mod.inclusion === 'excluded' ? 'line-through' : '')}>
+					{mod.name}
+				</h3>
+				<div class="toggles">
+					<a class={'include ' + getModLinkClass(mod, 'priority')} href={getModLink(state, mod, 'priority')}>Include</a>
+					<!--<a href={getModLink(mod, 'ignored')}>ignore</a>-->
+					<a class={'exclude ' + getModLinkClass(mod, 'excluded')} href={getModLink(state, mod, 'excluded')}>Exclude</a>
+				</div>
+			</div>
+			<p class={"" + (mod.inclusion === 'excluded' ? 'line-through' : '')}>{@html convertLineBreaks(mod.description)}</p>
 		</div>
 	{/each}
 </div>
-<div id="footer">
-	<section>
-		<a href={tradeLink} target="_blank" class="trade">Open Trade Link</a>
+<div id="footer" class="fixed bottom-0 left-0 w-full p-3 bg-gray-700 flex justify-center">
+	<section class="max-w-2xl w-full">
+		{#if numSelectedMods > 0}
+			<a href={tradeLink} target="_blank" class="trade-link">Open Trade Link</a>
+		{:else}
+			<button disabled class="trade-link">Open Trade Link</button>
+		{/if}
 	</section>
 </div>
-
 <style>
-a, a:visited {
-	font-weight: normal;
-	padding: 0.25em;
-	background: #333333;
-	color: #eee;
+.toggles a {
+	@apply text-sm inline-block px-2 py-1 rounded text-gray-300;
 }
 
-a.active {
-	background: forestgreen;
+.toggles a.include {
+	@apply bg-emerald-950/50;
 }
+
+.toggles a.exclude {
+	@apply bg-amber-950/50;
+}
+
+.toggles a.include.active {
+	@apply bg-emerald-500 text-gray-950;
+}
+
+.toggles a.exclude.active {
+	@apply bg-red-700;
+}
+
+.trade-link {
+	@apply bg-emerald-500 text-white px-4 py-2 rounded inline-block;
+}
+
+button.trade-link {
+	@apply bg-emerald-500/25 text-gray-500 cursor-not-allowed;
+}
+
 </style>

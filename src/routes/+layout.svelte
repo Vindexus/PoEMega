@@ -2,27 +2,12 @@
 	import '../app.css';
 </script>
 
-<div class="app">
-	<main>
+<div class="w-full flex justify-center pb-20">
+	<main class="max-w-2xl w-full p-4 bg-slate-900">
 		<slot />
 	</main>
 </div>
 
 <style>
-	.app {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-	}
 
-	main {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		padding: 1rem;
-		width: 100%;
-		max-width: 64rem;
-		margin: 0 auto;
-		box-sizing: border-box;
-	}
 </style>
