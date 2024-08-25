@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import {page} from '$app/stores';
 
 	import {afterNavigate, beforeNavigate, pushState } from "$app/navigation";
@@ -11,7 +12,6 @@
 	let state = urlToAppState($page.url.searchParams.toString());
 	let searchInputValue = state.search
 	let urlTimeout: number;
-	let includedMods : string[] = []
 
 	function convertLineBreaks(input: string) {
 		return input.replace(/\n/g, '<br />');
@@ -25,7 +25,6 @@
 
 	function updateStateFromCurrentURL () {
 		const currentURL = window.location.toString()
-		console.log('currentUrl', currentURL)
 		const newState = urlToAppState(currentURL)
 		state = newState
 		searchInputValue = newState.search
@@ -36,7 +35,6 @@
 	})
 	
 	afterNavigate(() => {
-		console.log('scroll thing')
 		window.scrollTo(0, scrollY);
 		updateStateFromCurrentURL()
 	})
@@ -49,6 +47,8 @@
 			description: mod.description,
 			inclusion: setting.inclusion ?? 'ignored',
 			weight: setting.weight ?? DEFAULT_WEIGHT,
+			
+			// TODO: Remove these link properties I think?
 			priorityLink: '/?priority',
 			excludedLink: '/?excluded',
 			type: mod.type,
@@ -72,20 +72,20 @@
 			newState.search = searchInputValue
 			console.log('push state')
 			//goto('/?' + appStateToUSP(newState))
-			pushState('?' + appStateToUSP(newState), {})
+			pushState(base + '/?' + appStateToUSP(newState), {})
 		}, 250)
 	}
 	
 	$: numSelectedMods = Array.from(state.modSettings.values()).filter((mod) => mod.inclusion !== 'ignored').length
 	$: filteredMods = filterMods(searchInputValue, state)
-	$: clearSearch = '/?' + appStateToUSP({
+	$: clearSearch = base + '/?' + appStateToUSP({
 		...state,
 		search: ''
 	}).toString()
 	$: tradeLink = getTradeLink(MODS_LIST, state)
 	const getModLink = (state: AppState, mod: Mod, include: ModInclusion) : string => {
 		const newLink = getModInclusionLink(state, mod.key, include)
-		return '/?' + newLink
+		return base + '/?' + newLink
 	}
 	
 	const getModLinkClass = (mod: ModItem, include: ModInclusion) : string => {
