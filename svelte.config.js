@@ -14,7 +14,7 @@ const config = {
 		adapter: adapter(),
 
 		paths: {
-			base: process.argv.includes('dev') ? '' : '/PoEMega'
+			base: '/PoEMega'
 		}
 	}
 };
