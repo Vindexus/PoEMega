@@ -145,9 +145,18 @@ function modInclusionToLetter (inclusion: ModInclusion) : string {
  * If that inclusion is already in the app state, this will toggle it
  * Thus, the final URL is dependent on the state
  */
-export function getModInclusionLink (state: AppState, modKey: ModKey, inclusion: ModInclusion) {
+export function getModInclusionLink (state: AppState, modKey: ModKey, inclusion: ModInclusion, newWeight?: ModWeight) {
 	const url = appStateToUSP(state)
 	const setting = state.modSettings.get(modKey)!
+	const weight = typeof newWeight === "undefined" ? setting.weight : newWeight
+
+	if (setting.weight !== newWeight && newWeight) {
+		url.set(modKey, modSettingToStr({
+			weight: newWeight,
+			inclusion
+		}))
+		return url.toString()
+	}
 
 	// This generates the URL for the "Ignore" button
 	if (inclusion === 'ignored') {
@@ -157,7 +166,7 @@ export function getModInclusionLink (state: AppState, modKey: ModKey, inclusion:
 		}
 		else {
 			url.set(modKey, modSettingToStr({
-				weight: setting.weight,
+				weight: weight,
 				inclusion: "included"
 			}))
 		}
@@ -175,7 +184,7 @@ export function getModInclusionLink (state: AppState, modKey: ModKey, inclusion:
 	}
 	else {
 		url.set(modKey, modSettingToStr({
-			weight: setting.weight,
+			weight: weight,
 			inclusion
 		}))
 	}

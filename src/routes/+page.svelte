@@ -6,7 +6,7 @@
 	import { browser } from '$app/environment'
 	import {MODS_LIST} from "$lib/mods";
 	import {getTradeLink} from "$lib/trade";
-	import {DEFAULT_WEIGHT, type Mod, type ModInclusion, type ModItem} from "$lib/mega";
+	import {DEFAULT_WEIGHT, type Mod, type ModInclusion, type ModItem, type ModWeight} from "$lib/mega";
 	import {searchMods} from "$lib/mod-search";
 	
 	let windowSearch = browser ? window.location.search : ''
@@ -88,7 +88,7 @@
 			newState.search = searchInputValue
 			//goto('/?' + appStateToUSP(newState))
 			//pushState(base + '/?' + appStateToUSP(newState), {})
-			goto('/?' + appStateToUSP(newState), {
+			goto(base + '/?' + appStateToUSP(newState), {
 				noScroll: true,
 				keepFocus: true,
 			})
@@ -106,8 +106,8 @@
 		view: state.view === 'selected' ? 'search' : 'selected'
 	}).toString()
 	$: tradeLink = getTradeLink(MODS_LIST, state)
-	const getModLink = (state: AppState, mod: Mod, include: ModInclusion) : string => {
-		const newLink = getModInclusionLink(state, mod.key, include)
+	const getModLink = (state: AppState, mod: Mod, include: ModInclusion, weight?: ModWeight) : string => {
+		const newLink = getModInclusionLink(state, mod.key, include, weight)
 		return base + '/?' + newLink
 	}
 	
@@ -162,6 +162,21 @@
 					<!--<a href={getModLink(mod, 'ignored')}>ignore</a>-->
 					<a class={'exclude ' + getModLinkClass(mod, 'excluded')} href={getModLink(state, mod, 'excluded')}>Exclude</a>
 				</div>
+			</div>
+			<div class={"transition-[height] overflow-hidden flex items-center " + (mod.inclusion === 'included' || mod.inclusion === 'priority' ? /*' h-12'*/'h-0' : 'h-0')}>
+				<div class="me-2">Weight:</div>
+				<div class="inline-flex rounded-md shadow-sm" role="group">
+					<a href={getModLink(state, mod, mod.inclusion, 1)} class="px-3 py-1.5 text-xs font-medium rounded-s-lg focus:z-10 focus:ring-2 bg-gray-800 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
+						1
+					</a>
+					<a href="#lol" class="px-3 py-1.5 text-xs font-medium r-gray-200 focus:z-10 focus:ring-2 bg-gray-600 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
+						2
+					</a>
+					<a href="#lol" class="px-3 py-1.5 text-xs font-medium rounded-e-lg focus:z-10 focus:ring-2 bg-gray-800 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
+						3
+					</a>
+				</div>
+
 			</div>
 			<p class={"" + (mod.inclusion === 'excluded' ? 'line-through' : '')}>{@html convertLineBreaks(mod.description)}</p>
 		</div>
