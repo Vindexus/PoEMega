@@ -1,19 +1,12 @@
 import type {ModKey} from "$lib/mods-consts";
-import {
-	DEFAULT_MOD_SETTING,
-	DEFAULT_WEIGHT,
-	type Mod, MOD_WEIGHTS,
-	type ModInclusion,
-	type ModSetting,
-	type ModWeight
-} from "$lib/mega";
-import {MODS_LIST} from "$lib/mods";
+import {DEFAULT_WEIGHT, MOD_WEIGHTS, type ModWeight} from "$lib/mega";
+import {MODS} from "$lib/mods";
 
-export type ModsSettings = Map<ModKey, ModSetting>
+export type ModsSettings = Map<ModKey, ModWeight>
 
 export type AppState = {
 	search: string
-	modSettings: ModsSettings
+	modWeights: ModsSettings
 	view: 'search' | 'selected'
 }
 
@@ -38,14 +31,13 @@ export function appStateToUSP (state: AppState): URLSearchParams {
 	if (state.view === 'selected') {
 		usp.set('view', 'selected')
 	}
-	Array.from(state.modSettings.entries())
+	Array.from(state.modWeights.entries())
 		.sort(([a], [b]) => {
 			return a < b ? -1 : 1
 		})
-		.forEach(([key, setting]) => {
-			const val = modSettingToStr(setting)
-			if (val) {
-				usp.set(key, val)
+		.forEach(([key, val]) => {
+			if (val !== null) {
+				usp.set(key, `${val}`)
 			}
 		})
 
@@ -57,7 +49,7 @@ function numberToWeight (num: number | string) : ModWeight {
 	if (MOD_WEIGHTS.includes(n as ModWeight)) {
 		return n as ModWeight
 	}
-	return DEFAULT_WEIGHT
+	return null
 }
 
 function strToUSP (urlS: string) : URLSearchParams {
@@ -75,118 +67,35 @@ export function urlToAppState (urlS: string) : AppState {
 	const usp = strToUSP(urlS)
 	const state : AppState = {
 		search: usp.get('search') ?? '',
-		modSettings: new Map<ModKey, ModSetting>(),
+		modWeights: new Map<ModKey, ModWeight>(),
 		view: usp.get('view') === 'selected' ? 'selected' : 'search',
 	}
 
-	MODS_LIST.forEach((mod: Mod) => {
-		if (usp.has(mod.key)) {
-			state.modSettings.set(mod.key as ModKey, strToModSetting(usp.get(mod.key) as string))
+	for (const [key, val] of usp.entries()) {
+		if (MODS[key as ModKey]) {
+			const weight = numberToWeight(val)
+			if (weight !== null) {
+				state.modWeights.set(key as ModKey, weight)
+			}
 		}
-		else {
-			state.modSettings.set(mod.key as ModKey, DEFAULT_MOD_SETTING)
-		}
-	})
+	}
 
 	return state
 }
 
-function modSettingToStr (setting: ModSetting) : string {
-	if (setting.inclusion === 'ignored' && setting.weight === DEFAULT_WEIGHT) {
-		return ''
-	}
-	let str = modInclusionToLetter(setting.inclusion)
-	if (setting.weight != DEFAULT_WEIGHT) {
-		str += setting.weight
-	}
-	return str
-}
-
-function strToModSetting (str: string) : ModSetting {
-	if (!str) {
-		return DEFAULT_MOD_SETTING
-	}
-	const letter= str.slice(0, 1)
-	const weightStr = str.slice(1)
-	return {
-		inclusion: letterToModInclusion(letter),
-		weight: numberToWeight(weightStr)
-	}
-}
-
-function letterToModInclusion (letter: string) : ModInclusion {
-	switch (letter) {
-		case 'p':
-			return 'priority'
-		case 'n':
-			return 'excluded'
-		case 'y':
-			return 'included'
-		default:
-			return 'ignored'
-	}
-}
-
-function modInclusionToLetter (inclusion: ModInclusion) : string {
-	switch (inclusion) {
-		case 'priority':
-			return 'p'
-		case 'excluded':
-			return 'n'
-		case 'included':
-			return 'y'
-		default:
-			return ''
-	}
-}
 
 /**
  * This gives you the URL for a specific inclusion
  * If that inclusion is already in the app state, this will toggle it
  * Thus, the final URL is dependent on the state
  */
-export function getModInclusionLink (state: AppState, modKey: ModKey, inclusion: ModInclusion, newWeight?: ModWeight) {
+export function getModWeightToggleLink (state: AppState, modKey: ModKey, newWeight: ModWeight) {
 	const url = appStateToUSP(state)
-	const setting = state.modSettings.get(modKey)!
-	const weight = typeof newWeight === "undefined" ? setting.weight : newWeight
-
-	if (setting.weight !== newWeight && newWeight) {
-		url.set(modKey, modSettingToStr({
-			weight: newWeight,
-			inclusion
-		}))
-		return url.toString()
+	if (newWeight === null || url.get(modKey) === `${newWeight}`) {
+		url.delete(modKey)
 	}
-
-	// This generates the URL for the "Ignore" button
-	if (inclusion === 'ignored') {
-		// If it isn't ignored, then we ignore it
-		if (setting.inclusion !== 'ignored') {
-			url.delete(modKey)
-		}
-		else {
-			url.set(modKey, modSettingToStr({
-				weight: weight,
-				inclusion: "included"
-			}))
-		}
-	}
-	else if (setting.inclusion === inclusion) {
-		if (setting.weight === DEFAULT_WEIGHT) {
-			url.delete(modKey)
-		}
-		else {
-			url.set(modKey, modSettingToStr({
-				weight: DEFAULT_WEIGHT,
-				inclusion
-			}))
-		}
-	}
-	else {
-		url.set(modKey, modSettingToStr({
-			weight: weight,
-			inclusion
-		}))
+	else if (newWeight !== null) {
+		url.set(modKey, `${newWeight}`)
 	}
 	return url.toString()
 }

@@ -1,12 +1,13 @@
 <script lang="ts">
+	import {onMount} from 'svelte'
 	import {base} from '$app/paths';
 	import {page} from '$app/stores';
 	import {afterNavigate, beforeNavigate, goto} from "$app/navigation";
-	import {type AppState, appStateToUSP, getModInclusionLink, urlToAppState} from "$lib/state";
+	import {type AppState, appStateToUSP, getModWeightToggleLink, urlToAppState} from "$lib/state";
 	import {browser} from '$app/environment'
 	import {MODS_LIST} from "$lib/mods";
 	import {getTradeLink} from "$lib/trade";
-	import {DEFAULT_WEIGHT, type Mod, type ModInclusion, type ModItem, type ModWeight} from "$lib/mega";
+	import {type Mod} from "$lib/mega";
 	import {searchMods} from "$lib/mod-search";
 	import ModButtons from "../components/ModButtons.svelte";
 	import cx from 'classnames'
@@ -15,6 +16,11 @@
 	let state = urlToAppState(windowSearch);
 	let searchInputValue = state.search
 	let urlTimeout: number;
+	let navigateScrollKey : string = getStateScrollKey(state)
+	
+	function getStateScrollKey (appState: AppState) {
+		return [appState.search, appState.view].join('-')
+	}
 
 	function convertLineBreaks(input: string) {
 		return '<div>' +  input.split(/\n/g).join('</div><div>') + '</div>'
@@ -25,54 +31,58 @@
 	beforeNavigate(() => {
 		scrollY = window.scrollY;
 	});
+
+	onMount(() => {
+		const searchInput = document.querySelector('input[name="search"]') as HTMLInputElement
+		searchInput.focus()
+	})
 	
 	function updateStateFromWindowLocation () {
 		windowSearch = browser ? window.location.search : ''
 		const newState = urlToAppState(windowSearch)
 		state = newState
 		searchInputValue = newState.search
-		
-		if (searchInputValue.length && newState.view === 'search') {
-			// Focus on the search input
-			const searchInput = document.querySelector('input[name="search"]') as HTMLInputElement
-			searchInput.focus()
+
+		// Clicking on weights should maintain your scroll position, but searching
+		// or changing the view should scroll you to the top
+		const newScrollKey = getStateScrollKey(newState)
+		if (newScrollKey !== navigateScrollKey) {
+			window.scrollTo(0, 0)
 		}
+		else {
+			window.scrollTo(0, scrollY);
+		}
+		navigateScrollKey = newScrollKey
 	}
 
 	afterNavigate(() => {
-		window.scrollTo(0, scrollY);
 		//updateStateFromCurrentURL()
 
 		updateStateFromWindowLocation()
 	})
-
-	function modToModItem (mod: Mod, state: AppState) : ModItem {
-		const setting = state.modSettings.get(mod.key)!
-		return {
-			key: mod.key,
-			name: mod.name,
-			description: mod.description,
-			inclusion: setting.inclusion ?? 'ignored',
-			weight: setting.weight ?? DEFAULT_WEIGHT,
-			
-			image: mod.image,
-			searchStat: mod.searchStat,
-		}
-	}
 	
-	function filterMods (appState: AppState) : ModItem[] {
+	function filterMods (appState: AppState) : (Mod&{href:string})[] {
+		let list
 		if (appState.view === 'selected') {
-			return MODS_LIST.filter((mod) => {
-				const setting = appState.modSettings.get(mod.key)!
-				return setting.inclusion !== 'ignored'
-			}).map((mod) => {
-				return modToModItem(mod, appState)
+			list = MODS_LIST.filter((mod) => {
+				const weight = appState.modWeights.get(mod.key)
+				return !!weight
 			})
 		}
+		else {
+			list = searchMods(MODS_LIST, appState.search).map((mod) => {
+				return mod
+			});
+		}
 		
-		return searchMods(MODS_LIST, appState.search).map((mod) => {
-			return modToModItem(mod, appState)
-		});
+		return list.map((mod) => {
+			const weight = appState.modWeights.get(mod.key)
+			const href = base + '/?' + getModWeightToggleLink(state, mod.key, weight || 5)
+			return {
+				...mod,
+				href,
+			}
+		})
 	}
 	
 	function inputSearchChanged (e: Event) : void {
@@ -81,20 +91,37 @@
 		state.search = searchInputValue
 		filteredMods = filterMods(state)
 		clearTimeout(urlTimeout)
+		
+		// Only scroll up if there's something in the search box
+		// This is because it was annoying to have the screen jump when I
+		// did ctrl+a and delete, before typing my new search
+		if (searchInputValue.length) {
+			window.scrollTo(0, 0)
+		}
 
+		/**
+		 * We use a timeout and debounce here so that their search history
+		 * doesn't have every single letter that they've typed
+		 * Instead it'll just have the searches that they've finished typing
+		 */
 		urlTimeout = setTimeout(() => {
 			const newState = urlToAppState($page.url.searchParams.toString())
 			newState.search = searchInputValue
 			//goto('/?' + appStateToUSP(newState))
 			//pushState(base + '/?' + appStateToUSP(newState), {})
 			goto(base + '/?' + appStateToUSP(newState), {
+				// Prevents the page from scrolling to the top. This is intentional because we scroll
+				// to the top as soon as we start filtering, and they might scroll a bit in the time
+				// it takes for the debounce to run
 				noScroll: true,
 				keepFocus: true,
 			})
-		}, 2000)
+		}, 250)
 	}
 	
-	$: numSelectedMods = Array.from(state.modSettings.values()).filter((mod) => mod.inclusion !== 'ignored').length
+	$: numSelectedMods = Array.from(state.modWeights.values()).filter((weight) => {
+		return !!weight
+	}).length
 	$: filteredMods = filterMods(state)
 	$: clearSearchHREF = base + '/?' + appStateToUSP({
 		...state,
@@ -105,17 +132,6 @@
 		view: state.view === 'selected' ? 'search' : 'selected'
 	}).toString()
 	$: tradeLink = getTradeLink(MODS_LIST, state)
-	const getModLink = (state: AppState, mod: Mod, include: ModInclusion, weight?: ModWeight) : string => {
-		const newLink = getModInclusionLink(state, mod.key, include, weight)
-		return base + '/?' + newLink
-	}
-	
-	const getModLinkClass = (mod: ModItem, include: ModInclusion) : string => {
-		if (mod.inclusion === include) {
-			return 'active'
-		}
-		return ''
-	}
 </script>
 
 <svelte:head>
@@ -124,7 +140,7 @@
 </svelte:head>
 
 <div class="top-0 sticky bg-slate-900 z-30">
-	<h1 class="text-2xl bold">Megalomaniac Trade Search Tool</h1>
+	<h1 class="text-2xl bold mb-1">Megalomaniac Trade Search Tool</h1>
 	<form method="GET" action="/" class="relative">
 		<input disabled={state.view !== 'search'} class={"outline-none w-full text-gray-800 ps-2 pe-8 py-1 " + (state.view === 'selected' ? 'opacity-50' : '')} autocomplete="off" spellcheck="false" value={searchInputValue} on:input={inputSearchChanged} type="text" name="search" placeholder="Search" />
 		{#if searchInputValue}<a class="absolute right-0 top-0 h-full text-gray-600 px-2 flex items-center" href={clearSearchHREF}>X</a>{/if}
@@ -151,47 +167,43 @@
 
 <div class="">
 	{#each filteredMods as mod}
-		<div class={"border-2 rounded px-3 py-2 mb-4 " + ((mod.inclusion === 'priority' || mod.inclusion === 'included') ? 'border-emerald-500 text-white' : 'text-slate-300 border-cyan-900')}>
-			<div class="flex justify-between mb-2">
-				<h3 class={"text-xl font-semibold text-gray-300 " + (mod.inclusion === 'excluded' ? 'line-through opacity-50' : '')}>
-					{mod.name}
-				</h3>
-				<div class="toggles">
-					<!--<a class={'include ' + getModLinkClass(mod, 'priority')} href={getModLink(state, mod, 'priority')}>Include</a>
-					&lt;!&ndash;<a href={getModLink(mod, 'ignored')}>ignore</a>&ndash;&gt;
-					<a class={'exclude ' + getModLinkClass(mod, 'excluded')} href={getModLink(state, mod, 'excluded')}>Exclude</a>-->
+		<div class={cx("border-2 rounded px-3 py-3 mb-4 ", {
+			'border-blue-200 text-white bg-slate-800': state.modWeights.has(mod.key),
+			'border-gray-800 text-gray-300': !state.modWeights.has(mod.key),
+		})}>
+			<div class="grid grid-cols-[1fr_min-content] mb-3">
+				<div class="pe-1">
+					<h3 class={cx("text-xl font-semibold mb-1 ", {
+						'line-through': state.modWeights.get(mod.key) === -1,
+					})}>
+						<a href={mod.href}>{mod.name}</a>
+					</h3>
+					<div class={cx("flex gap-1.5 flex-col ", {
+						'line-through': state.modWeights.get(mod.key) === -1,
+					})}>{@html convertLineBreaks(mod.description)}</div>
+				</div>
+				<div>
+					<a href={mod.href} class="relative">
+						<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(/notables/frame.png)`} />
+						<div class="relative bg-center z-0 bg-no-repeat w-16 h-16 top-0 left-0" style={`background-size: 71% auto; background-image: url(/notables/${mod.image}.png)`} />
+					</a>
 				</div>
 			</div>
-			<!--<div class={"transition-[height] overflow-hidden flex items-center " + (mod.inclusion === 'included' || mod.inclusion === 'priority' ? /*' h-12'*/'h-0' : 'h-0')}>
-				<div class="me-2">Weight:</div>
-				<div class="inline-flex rounded-md shadow-sm" role="group">
-					<a href={getModLink(state, mod, mod.inclusion, 1)} class="px-3 py-1.5 text-xs font-medium rounded-s-lg focus:z-10 focus:ring-2 bg-gray-800 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
-						1
-					</a>
-					<a href="#lol" class="px-3 py-1.5 text-xs font-medium r-gray-200 focus:z-10 focus:ring-2 bg-gray-600 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
-						2
-					</a>
-					<a href="#lol" class="px-3 py-1.5 text-xs font-medium rounded-e-lg focus:z-10 focus:ring-2 bg-gray-800 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
-						3
-					</a>
-				</div>
-
-			</div>-->
-			<div class={cx('grid grid-cols-[1fr_min-content] items-center', {
-				'opacity-50': mod.inclusion === 'excluded'
-			})}>
-				<div class={"flex gap-2 flex-col " + (mod.inclusion === 'excluded' ? 'line-through' : '')}>{@html convertLineBreaks(mod.description)}</div>
-				<div class="relative me-3  self-start">
-					<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(/notables/frame.png)`} />
-					<div class="relative bg-center z-0 bg-no-repeat w-12 h-12 top-0 left-0" style={`background-size: 85% auto; background-image: url(/notables/${mod.image}.png)`} />
-				</div>
-			</div>
-			<ModButtons mod={mod} state={state} setting={state.modSettings.get(mod.key)} />
+			<ModButtons mod={mod} state={state} />
 		</div>
 	{/each}
+	{#if state.view === 'selected' && numSelectedMods === 0}
+		<div class="text-center text-gray-400">No mods selected.</div>
+	{/if}
+	{#if state.view === 'search' && filteredMods.length === 0}
+		<div class="text-center text-gray-400">No mods found.</div>
+	{/if}
+	{#if state.view === 'selected' && numSelectedMods > 1}
+		<a class="text-red-300" href={'/' + base}>Clear All Selections</a>
+	{/if}
 </div>
-<div id="footer" class="fixed bottom-0 z-30 left-0 w-full p-3 bg-gray-700 flex justify-center">
-	<section class="max-w-2xl w-full">
+<div id="footer" class="fixed bottom-0 z-30 left-0 w-full bg-gray-700 flex justify-center">
+	<section class="max-w-2xl w-full py-3 px-2">
 		{#if numSelectedMods > 0}
 			<a href={tradeLink} target="_blank" class="trade-link">Open Trade Link</a>
 		{:else}
@@ -200,36 +212,6 @@
 	</section>
 </div>
 <style>
-.toggles a, .toggles a.exclude.active:hover {
-	@apply text-sm inline-block px-2 py-1 rounded text-gray-300;
-}
-
-.toggles a.include, div.toggles a.include.active:hover {
-	@apply bg-emerald-950/50 text-gray-300;
-}
-
-.toggles a.exclude, div.toggles a.exclude.active:hover {
-	@apply bg-amber-950/50;
-}
-
-.toggles a.include.active {
-	@apply bg-emerald-500 text-gray-950;
-}
-
-.toggles a.include:hover {
-	@apply bg-emerald-600 text-gray-950;
-}
-
-
-.toggles a.exclude.active {
-	@apply bg-red-700;
-}
-
-.toggles a.exclude:hover {
-	@apply bg-red-600;
-}
-
-
 .trade-link {
 	@apply bg-emerald-500 text-white px-4 py-2 rounded inline-block;
 }

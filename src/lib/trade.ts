@@ -1,4 +1,4 @@
-import type {Mod} from "$lib/mega";
+import {MAX_WEIGHT, type Mod} from "$lib/mega";
 import type {AppState} from "$lib/state";
 
 type TradeFilter = {
@@ -29,40 +29,54 @@ export type TradeQuery = {
 }
 
 export function getTradeQuery (mods: Mod[], state: AppState): TradeQuery {
+	// All non-excluded mods get put into the COUNT filter, but only the max ones will be enabled
+	// This is for easily toggling them on/off on the trade site
 	const countedMods = mods.filter((mod) => {
-		const include = state.modSettings.get(mod.key)?.inclusion
-		return include === 'priority' || include === 'included'
+		const weight = state.modWeights.get(mod.key)
+		return weight !== undefined && weight !== -1
 	})
-	const priorityMods = mods.filter((mod) => state.modSettings.get(mod.key)?.inclusion === 'priority')
-	const priorityMinCount = Math.min(3, priorityMods.length)
 
-	const excludedMods = mods.filter((mod) => state.modSettings.get(mod.key)?.inclusion === 'excluded')
+	const excludedMods = mods.filter((mod) => {
+		const weight = state.modWeights.get(mod.key)
+		return weight === -1
+	})
+
+	const summedMods = mods.filter((mod) => {
+		const weight = state.modWeights.get(mod.key)
+		return !!weight && weight > 0
+	})
 
 	const query : TradeQuery = {
 		stats: [
-			/*{
+			{
 				type: 'weight',
-				filters: // TODO: Add some weighted searching,
+				filters: summedMods.map((mod) =>{
+					return {
+						disabled: false,
+						id: 'explicit.stat_' + mod.searchStat,
+						value: {
+							weight: state.modWeights.get(mod.key)! as number
+						}
+					}
+				}),
 				disabled: false,
 				value: {
 					min: 1,
 				}
-			},*/
-			// This second block clones all the mods from the weighted sum search, but it
-			// groups them just into a "count" query that is disabled
-			// This is hear so you can easily swap your search from using weight sums to just going
-			// "I want any 2 of these mods" and then selecting them on and off
+			},
+			// Your high priority mods are put into their own group so they don't just affect
+			// the sum weighting, they become requirements
 			{
 				type: 'count',
 				filters: countedMods.map((mod) =>{
 					return {
-						disabled: state.modSettings.get(mod.key)?.inclusion !== 'priority',
+						disabled: state.modWeights.get(mod.key) !== MAX_WEIGHT,
 						id: 'explicit.stat_' + mod.searchStat
 					}
 				}),
-				disabled: priorityMinCount === 0,
+				disabled: false,
 				value: {
-					min: priorityMinCount,
+					min: 1,
 				}
 			},
 			{
@@ -118,8 +132,8 @@ export function getTradeLink (mods: Mod[], state: AppState) : string {
 			}
 		},
 		sort: {
-			// 'statgroup.0': 'desc', // This appears to be ignored, so I'm just using price
-			price: 'asc',
+			'statgroup.0': 'desc', // This appears to be ignored, so maybe just use price
+			//price: 'asc',
 		},
 	})
 

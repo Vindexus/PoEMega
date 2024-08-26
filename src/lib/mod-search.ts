@@ -32,7 +32,7 @@ const extractPhrases = (input: string) : string[] => {
 };
 
 export function textToSearch (input: string) : Search[] {
-	const extracted = extractPhrases(input)
+	const extracted = extractPhrases((input||'').trim().toLowerCase())
 	const phrases = extracted.filter((phrase) => {
 		const match = !!phrase.match(/[a-zA-Z0-9]{1,}/)
 		return phrase.length > 0 && match

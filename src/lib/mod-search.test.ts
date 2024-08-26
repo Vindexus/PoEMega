@@ -111,6 +111,10 @@ test('searches', () => {
 			excludes: ['Advance Guard'],
 		},
 		{
+			search: '  AILMENT  ',
+			total: 1,
+		},
+		{
 			search: 'ailment',
 			total: 1,
 		},
@@ -132,7 +136,7 @@ test('searches', () => {
 	for (const test of tests) {
 		const results = searchMods(subset, test.search)
 		if (test.total) {
-			expect(results.length, `Expected ${test.total} results`).toEqual(test.total)
+			expect(results.length, `Expected ${test.total} results for "${test.search}"`).toEqual(test.total)
 		}
 		if (test.includes) {
 			for (const inc of test.includes) {
