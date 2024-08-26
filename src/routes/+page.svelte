@@ -184,8 +184,8 @@
 				</div>
 				<div>
 					<a href={mod.href} class="relative">
-						<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(/notables/frame.png)`} />
-						<div class="relative bg-center z-0 bg-no-repeat w-16 h-16 top-0 left-0" style={`background-size: 71% auto; background-image: url(/notables/${mod.image}.png)`} />
+						<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(./notables/frame.png)`} />
+						<div class="relative bg-center z-0 bg-no-repeat w-16 h-16 top-0 left-0" style={`background-size: 71% auto; background-image: url(./notables/${mod.image}.png)`} />
 					</a>
 				</div>
 			</div>
