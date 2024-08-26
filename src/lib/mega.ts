@@ -5,7 +5,7 @@ export type Mod = {
 	name: string,
 	description: string,
 	searchStat: string,
-	type: string
+	image?: string
 }
 
 /**
@@ -17,21 +17,19 @@ export type Mod = {
 export type ModInclusion = 'priority' | 'excluded' | 'ignored' | 'included'
 
 // Fibonacci is just kinda neat
-export type ModWeight = 1 | 2 | 3 | 5 | 8 | 13 | 21
+export type ModWeight = 1 | 2 | 3 | 5 | 8
 
 export type ModSetting = {
 	inclusion: ModInclusion
 	weight: ModWeight
 }
 
-export type ModItem = Mod & ModSetting & {
-	priorityLink: string
-	excludedLink: string
-}
+export type ModItem = Mod & ModSetting
 
-export const MOD_WEIGHTS : ModWeight[] = [1, 2, 3, 5, 8, 13, 21]
+export const MOD_WEIGHTS : ModWeight[] = [1, 2, 3, 5, 8]
 
 export const DEFAULT_WEIGHT : ModWeight = 5
+export const MAX_WEIGHT : ModWeight = 8
 export const DEFAULT_MOD_SETTING : ModSetting = {
 	inclusion: 'ignored',
 	weight: DEFAULT_WEIGHT

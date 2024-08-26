@@ -1,21 +1,23 @@
 <script lang="ts">
-	import { base } from '$app/paths';
+	import {base} from '$app/paths';
 	import {page} from '$app/stores';
-	import {afterNavigate, goto, beforeNavigate, pushState } from "$app/navigation";
+	import {afterNavigate, beforeNavigate, goto} from "$app/navigation";
 	import {type AppState, appStateToUSP, getModInclusionLink, urlToAppState} from "$lib/state";
-	import { browser } from '$app/environment'
+	import {browser} from '$app/environment'
 	import {MODS_LIST} from "$lib/mods";
 	import {getTradeLink} from "$lib/trade";
 	import {DEFAULT_WEIGHT, type Mod, type ModInclusion, type ModItem, type ModWeight} from "$lib/mega";
 	import {searchMods} from "$lib/mod-search";
-	
+	import ModButtons from "../components/ModButtons.svelte";
+	import cx from 'classnames'
+
 	let windowSearch = browser ? window.location.search : ''
 	let state = urlToAppState(windowSearch);
 	let searchInputValue = state.search
 	let urlTimeout: number;
 
 	function convertLineBreaks(input: string) {
-		return input.replace(/\n/g, '<br />');
+		return '<div>' +  input.split(/\n/g).join('</div><div>') + '</div>'
 	}
 
 	let scrollY = 0;
@@ -53,10 +55,7 @@
 			inclusion: setting.inclusion ?? 'ignored',
 			weight: setting.weight ?? DEFAULT_WEIGHT,
 			
-			// TODO: Remove these link properties I think?
-			priorityLink: '/?priority',
-			excludedLink: '/?excluded',
-			type: mod.type,
+			image: mod.image,
 			searchStat: mod.searchStat,
 		}
 	}
@@ -124,7 +123,7 @@
 	<meta name="description" content="Find the perfect Megalomaniac for your build." />
 </svelte:head>
 
-<div class="top-0 sticky bg-slate-900">
+<div class="top-0 sticky bg-slate-900 z-30">
 	<h1 class="text-2xl bold">Megalomaniac Trade Search Tool</h1>
 	<form method="GET" action="/" class="relative">
 		<input disabled={state.view !== 'search'} class={"outline-none w-full text-gray-800 ps-2 pe-8 py-1 " + (state.view === 'selected' ? 'opacity-50' : '')} autocomplete="off" spellcheck="false" value={searchInputValue} on:input={inputSearchChanged} type="text" name="search" placeholder="Search" />
@@ -152,18 +151,18 @@
 
 <div class="">
 	{#each filteredMods as mod}
-		<div class={"border-2 rounded px-3 py-2 mb-2 " + (mod.inclusion === 'priority' ? 'border-emerald-500 text-white' : 'text-slate-300 border-cyan-900')}>
-			<div class="flex justify-between">
-				<h3 class={"text-xl font-bold " + (mod.inclusion === 'excluded' ? 'line-through' : '')}>
+		<div class={"border-2 rounded px-3 py-2 mb-4 " + ((mod.inclusion === 'priority' || mod.inclusion === 'included') ? 'border-emerald-500 text-white' : 'text-slate-300 border-cyan-900')}>
+			<div class="flex justify-between mb-2">
+				<h3 class={"text-xl font-semibold text-gray-300 " + (mod.inclusion === 'excluded' ? 'line-through opacity-50' : '')}>
 					{mod.name}
 				</h3>
 				<div class="toggles">
-					<a class={'include ' + getModLinkClass(mod, 'priority')} href={getModLink(state, mod, 'priority')}>Include</a>
-					<!--<a href={getModLink(mod, 'ignored')}>ignore</a>-->
-					<a class={'exclude ' + getModLinkClass(mod, 'excluded')} href={getModLink(state, mod, 'excluded')}>Exclude</a>
+					<!--<a class={'include ' + getModLinkClass(mod, 'priority')} href={getModLink(state, mod, 'priority')}>Include</a>
+					&lt;!&ndash;<a href={getModLink(mod, 'ignored')}>ignore</a>&ndash;&gt;
+					<a class={'exclude ' + getModLinkClass(mod, 'excluded')} href={getModLink(state, mod, 'excluded')}>Exclude</a>-->
 				</div>
 			</div>
-			<div class={"transition-[height] overflow-hidden flex items-center " + (mod.inclusion === 'included' || mod.inclusion === 'priority' ? /*' h-12'*/'h-0' : 'h-0')}>
+			<!--<div class={"transition-[height] overflow-hidden flex items-center " + (mod.inclusion === 'included' || mod.inclusion === 'priority' ? /*' h-12'*/'h-0' : 'h-0')}>
 				<div class="me-2">Weight:</div>
 				<div class="inline-flex rounded-md shadow-sm" role="group">
 					<a href={getModLink(state, mod, mod.inclusion, 1)} class="px-3 py-1.5 text-xs font-medium rounded-s-lg focus:z-10 focus:ring-2 bg-gray-800 border-gray-700 text-white hover:text-white hover:bg-gray-700 focus:ring-blue-500 focus:text-white">
@@ -177,12 +176,21 @@
 					</a>
 				</div>
 
+			</div>-->
+			<div class={cx('grid grid-cols-[1fr_min-content] items-center', {
+				'opacity-50': mod.inclusion === 'excluded'
+			})}>
+				<div class={"flex gap-2 flex-col " + (mod.inclusion === 'excluded' ? 'line-through' : '')}>{@html convertLineBreaks(mod.description)}</div>
+				<div class="relative me-3  self-start">
+					<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(/notables/frame.png)`} />
+					<div class="relative bg-center z-0 bg-no-repeat w-12 h-12 top-0 left-0" style={`background-size: 85% auto; background-image: url(/notables/${mod.image}.png)`} />
+				</div>
 			</div>
-			<p class={"" + (mod.inclusion === 'excluded' ? 'line-through' : '')}>{@html convertLineBreaks(mod.description)}</p>
+			<ModButtons mod={mod} state={state} setting={state.modSettings.get(mod.key)} />
 		</div>
 	{/each}
 </div>
-<div id="footer" class="fixed bottom-0 left-0 w-full p-3 bg-gray-700 flex justify-center">
+<div id="footer" class="fixed bottom-0 z-30 left-0 w-full p-3 bg-gray-700 flex justify-center">
 	<section class="max-w-2xl w-full">
 		{#if numSelectedMods > 0}
 			<a href={tradeLink} target="_blank" class="trade-link">Open Trade Link</a>
