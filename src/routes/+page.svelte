@@ -16,6 +16,7 @@
 	let state = urlToAppState(windowSearch);
 	let searchInputValue = state.search
 	let urlTimeout: number;
+	let searchTimeout: number
 	let navigateScrollKey : string = getStateScrollKey(state)
 	
 	function getStateScrollKey (appState: AppState) {
@@ -86,37 +87,40 @@
 	}
 	
 	function inputSearchChanged (e: Event) : void {
-		const target = e.target as HTMLInputElement;
-		searchInputValue = target.value
-		state.search = searchInputValue
-		filteredMods = filterMods(state)
-		clearTimeout(urlTimeout)
-		
-		// Only scroll up if there's something in the search box
-		// This is because it was annoying to have the screen jump when I
-		// did ctrl+a and delete, before typing my new search
-		if (searchInputValue.length) {
-			window.scrollTo(0, 0)
-		}
-
-		/**
-		 * We use a timeout and debounce here so that their search history
-		 * doesn't have every single letter that they've typed
-		 * Instead it'll just have the searches that they've finished typing
-		 */
-		urlTimeout = setTimeout(() => {
-			const newState = urlToAppState($page.url.searchParams.toString())
-			newState.search = searchInputValue
-			//goto('/?' + appStateToUSP(newState))
-			//pushState(base + '/?' + appStateToUSP(newState), {})
-			goto(base + '/?' + appStateToUSP(newState), {
-				// Prevents the page from scrolling to the top. This is intentional because we scroll
-				// to the top as soon as we start filtering, and they might scroll a bit in the time
-				// it takes for the debounce to run
-				noScroll: true,
-				keepFocus: true,
-			})
-		}, 250)
+		clearTimeout(searchTimeout)
+		searchTimeout = setTimeout(() => {
+			const target = e.target as HTMLInputElement;
+			searchInputValue = target.value
+			state.search = searchInputValue
+			filteredMods = filterMods(state)
+			clearTimeout(urlTimeout)
+			
+			// Only scroll up if there's something in the search box
+			// This is because it was annoying to have the screen jump when I
+			// did ctrl+a and delete, before typing my new search
+			if (searchInputValue.length) {
+				window.scrollTo(0, 0)
+			}
+	
+			/**
+			 * We use a timeout and debounce here so that their search history
+			 * doesn't have every single letter that they've typed
+			 * Instead it'll just have the searches that they've finished typing
+			 */
+			urlTimeout = setTimeout(() => {
+				const newState = urlToAppState($page.url.searchParams.toString())
+				newState.search = searchInputValue
+				//goto('/?' + appStateToUSP(newState))
+				//pushState(base + '/?' + appStateToUSP(newState), {})
+				goto(base + '/?' + appStateToUSP(newState), {
+					// Prevents the page from scrolling to the top. This is intentional because we scroll
+					// to the top as soon as we start filtering, and they might scroll a bit in the time
+					// it takes for the debounce to run
+					noScroll: true,
+					keepFocus: true,
+				})
+			}, 250)
+		}, 25)
 	}
 	
 	$: numSelectedMods = Array.from(state.modWeights.values()).filter((weight) => {
