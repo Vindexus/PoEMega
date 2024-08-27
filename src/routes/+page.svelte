@@ -8,7 +8,7 @@
 	import {MODS_LIST} from "$lib/mods";
 	import {getTradeLink} from "$lib/trade";
 	import {type Mod} from "$lib/mega";
-	import {searchMods} from "$lib/mod-search";
+	import {searchMods, textToSearch} from "$lib/mod-search";
 	import ModButtons from "../components/ModButtons.svelte";
 	import cx from 'classnames'
 
@@ -23,8 +23,20 @@
 		return [appState.search, appState.view].join('-')
 	}
 
-	function convertLineBreaks(input: string) {
-		return '<div>' +  input.split(/\n/g).join('</div><div>') + '</div>'
+	function convertLineBreaks (input: string) {
+		console.log('searchPieces', searchPieces)
+		return '<div>' +  input.split(/\n/g).map((text) => {
+			if (searchPieces.length) {
+				searchPieces.forEach((piece) => {
+					if (piece.wanted) {
+						text = text.replace(new RegExp(piece.phrase, 'gi'), (match) => {
+							return '<span class="text-yellow-400">' + match + '</span>'
+						})
+					}
+				})
+			}
+			return text
+		}).join('</div><div>') + '</div>'
 	}
 
 	let scrollY = 0;
@@ -135,7 +147,8 @@
 		...state,
 		view: state.view === 'selected' ? 'search' : 'selected'
 	}).toString()
-	$: tradeLink = getTradeLink(MODS_LIST, state)
+	$: tradeLink = getTradeLink(MODS_LIST, state);
+	$: searchPieces = textToSearch(state.search);
 </script>
 
 <svelte:head>
