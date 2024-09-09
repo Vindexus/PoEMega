@@ -188,24 +188,22 @@
 			'border-blue-200 text-white bg-slate-800': state.modWeights.has(mod.key),
 			'border-gray-800 text-gray-300': !state.modWeights.has(mod.key),
 		})}>
-			<div class="grid grid-cols-[1fr_min-content] mb-3">
+			<a href={mod.href} class="select-text grid grid-cols-[1fr_min-content] mb-3">
 				<div class="pe-1">
 					<h3 class={cx("text-xl font-semibold mb-1 ", {
 						'line-through': state.modWeights.get(mod.key) === -1,
 					})}>
-						<a href={mod.href}>{mod.name}</a>
+						{mod.name}
 					</h3>
-					<div class={cx("flex gap-1.5 flex-col ", {
+					<p class={cx("flex gap-1.5 flex-col ", {
 						'line-through': state.modWeights.get(mod.key) === -1,
-					})}>{@html convertLineBreaks(mod.description)}</div>
+					})}>{@html convertLineBreaks(mod.description)}</p>
 				</div>
-				<div>
-					<a href={mod.href} class="relative">
-						<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(./notables/frame.png)`} />
-						<div class="relative bg-center z-0 bg-no-repeat w-16 h-16 top-0 left-0" style={`background-size: 71% auto; background-image: url(./notables/${mod.image}.png)`} />
-					</a>
+				<div class="relative">
+					<div class="absolute bg-center bg-contain z-10 bg-no-repeat w-full h-full top-0 left-0" style={`background-image: url(./notables/frame.png)`} />
+					<div class="relative bg-center z-0 bg-no-repeat w-16 h-16 top-0 left-0" style={`background-size: 71% auto; background-image: url(./notables/${mod.image}.png)`} />
 				</div>
-			</div>
+			</a>
 			<ModButtons mod={mod} state={state} />
 		</div>
 	{/each}
