@@ -3,7 +3,7 @@
 	import {base} from '$app/paths';
 	import {page} from '$app/stores';
 	import {afterNavigate, beforeNavigate, goto} from "$app/navigation";
-	import {type AppState, appStateToUSP, getModWeightToggleLink, urlToAppState} from "$lib/state";
+	import {type AppState, appStateToUSP, getMetaFromState, getModWeightToggleLink, urlToAppState} from "$lib/state";
 	import {browser} from '$app/environment'
 	import {MODS_LIST} from "$lib/mods";
 	import {getTradeLink} from "$lib/trade";
@@ -50,10 +50,16 @@
 		searchInput.focus()
 	})
 	
+	function updateMetaInfo (state: AppState) {
+		const meta = getMetaFromState(state)
+		document.title = meta.title
+	}
+	
 	function updateStateFromWindowLocation () {
 		windowSearch = browser ? window.location.search : ''
 		const newState = urlToAppState(windowSearch)
 		state = newState
+		updateMetaInfo(newState)
 		searchInputValue = newState.search
 
 		// Clicking on weights should maintain your scroll position, but searching
@@ -70,8 +76,9 @@
 
 	afterNavigate(() => {
 		//updateStateFromCurrentURL()
-
+		
 		updateStateFromWindowLocation()
+		
 	})
 	
 	function filterMods (appState: AppState) : (Mod&{href:string})[] {

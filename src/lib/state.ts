@@ -99,3 +99,56 @@ export function getModWeightToggleLink (state: AppState, modKey: ModKey, newWeig
 	}
 	return url.toString()
 }
+
+/**
+ * Returns the list of selected mods in the order of their weight
+ * Used for building the title and description of the page
+ * @param state
+ */
+function getSelectedModNames (state: AppState) : string[] {
+	const mods : {
+		key: ModKey,
+		weight: ModWeight
+	}[] = []
+	for (const [key, weight] of state.modWeights.entries()) {
+		mods.push({key, weight})
+	}
+
+	return mods.filter(({weight}) => {
+		return weight > 0
+	}).sort((a, b) => {
+		return a.weight > b.weight ? -1 : 1
+	}).map((m) => {
+		return MODS[m.key].name
+	})
+}
+
+export function getMetaFromState (state: AppState) : {
+	title: string
+	description: string
+} {
+	const mods = getSelectedModNames(state)
+	const suffix = 'Megalomaniac Trade Search - Path of Exile Tool'
+
+	let title = ''
+
+	if (mods.length > 10) {
+		const first = mods.slice(0, 4)
+		title = first.join(', ') + ', ' + (mods.length - 4) + ' more'
+	}
+	else if (mods.length > 2) {
+		const last = mods.pop()
+		title = mods.join(', ') + ', and ' + last
+	}
+	else if (mods.length === 2) {
+		title = mods[0] + ' and ' + mods[1]
+	}
+	else if (mods.length === 1) {
+		title = mods[0]
+	}
+
+	return {
+		title: title + (title.length ? ' - ' : '') + suffix,
+		description: 'Find the perfect Megalomaniac for your build.',
+	}
+}

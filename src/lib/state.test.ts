@@ -1,5 +1,5 @@
 import {expect, test} from 'vitest'
-import {appStateToUSP, getModWeightToggleLink, normalizeAppStateURL, urlToAppState} from "$lib/state";
+import {appStateToUSP, getMetaFromState, getModWeightToggleLink, normalizeAppStateURL, urlToAppState} from "$lib/state";
 import type {ModKey} from "$lib/mods-consts";
 import {type ModWeight} from "$lib/mega";
 
@@ -15,6 +15,7 @@ type URLToStateTest = {
 	expected: {
 		search?: string,
 		modWeights?: Partial<Record<ModKey, ModWeight|null>>
+		documentTitle?: string
 	}
 }
 test('app state to URLSearchParams', () => {
@@ -91,6 +92,7 @@ test('URL to AppState', () => {
 		{
 			url: 'tts=-1&adr=-1&wid=8&fet=1&dam=8',
 			expected: {
+				documentTitle: 'Widespread Destruction, Darting Movements, and Fettle',
 				modWeights: {
 					tts: -1,
 					adr: -1,
@@ -136,6 +138,10 @@ test('URL to AppState', () => {
 		}
 		else {
 			expect(state.search).toBe('')
+		}
+		if (test.expected.documentTitle) {
+			const {title} = getMetaFromState(state)
+			expect(title).toContain(test.expected.documentTitle)
 		}
 		for (const [key, setting] of Object.entries(test.expected.modWeights || {})) {
 			const actual = state.modWeights.get(key as ModKey)
