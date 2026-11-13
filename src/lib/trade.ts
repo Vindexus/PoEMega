@@ -23,7 +23,10 @@ type TradeStat = {
 
 export type TradeQuery = {
 	status: {
-		option: 'online' | 'any'
+		option: 'online' | // In Person (online)
+			'any' |
+			'securable' | // Instant Buyout
+			'available' // Instant Buyout and In Person
 	},
 	stats: TradeStat[],
 }
@@ -105,7 +108,7 @@ export function getTradeQuery (mods: Mod[], state: AppState): TradeQuery {
 			}
 		],
 		status: {
-			option: 'online',
+			option: 'available',
 		},
 	}
 	return query

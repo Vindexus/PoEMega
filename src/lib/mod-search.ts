@@ -74,3 +74,45 @@ export function searchMods (mods: Mod[], search: string) {
 		return true
 	})
 }
+
+function escapeRegExp (input: string) : string {
+	return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function escapeHtml (input: string) : string {
+	return input
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}
+
+// Returns HTML-safe markup: `text` escaped, with every case-insensitive match
+// of any phrase wrapped in a highlight span.
+// All phrases go into ONE regex so a single pass can never match inside
+// markup it has already inserted (e.g. the "a" in `class="..."`).
+export function highlightText (text: string, phrases: string[]) : string {
+	const usable = phrases.filter((phrase) => phrase.length > 0)
+	if (!usable.length) {
+		return escapeHtml(text)
+	}
+
+	// Longest first so "attack speed" wins over "attack" at the same position
+	const pattern = [...usable]
+		.sort((a, b) => b.length - a.length)
+		.map(escapeRegExp)
+		.join('|')
+	const regex = new RegExp(pattern, 'gi')
+
+	let result = ''
+	let lastIndex = 0
+	for (const match of text.matchAll(regex)) {
+		const index = match.index!
+		result += escapeHtml(text.slice(lastIndex, index))
+		result += '<span class="text-yellow-400">' + escapeHtml(match[0]) + '</span>'
+		lastIndex = index + match[0].length
+	}
+	result += escapeHtml(text.slice(lastIndex))
+	return result
+}
