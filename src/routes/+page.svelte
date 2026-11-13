@@ -8,7 +8,7 @@
 	import {MODS_LIST} from "$lib/mods";
 	import {getTradeLink} from "$lib/trade";
 	import {type Mod} from "$lib/mega";
-	import {searchMods, textToSearch} from "$lib/mod-search";
+	import {highlightText, searchMods, textToSearch} from "$lib/mod-search";
 	import ModButtons from "../components/ModButtons.svelte";
 	import cx from 'classnames'
 
@@ -24,19 +24,8 @@
 	}
 
 	function convertLineBreaks (input: string) {
-		console.log('searchPieces', searchPieces)
-		return '<div>' +  input.split(/\n/g).map((text) => {
-			if (searchPieces.length) {
-				searchPieces.forEach((piece) => {
-					if (piece.wanted) {
-						text = text.replace(new RegExp(piece.phrase, 'gi'), (match) => {
-							return '<span class="text-yellow-400">' + match + '</span>'
-						})
-					}
-				})
-			}
-			return text
-		}).join('</div><div>') + '</div>'
+		const wanted = searchPieces.filter((piece) => piece.wanted).map((piece) => piece.phrase)
+		return '<div>' + input.split(/\n/g).map((text) => highlightText(text, wanted)).join('</div><div>') + '</div>'
 	}
 
 	let scrollY = 0;

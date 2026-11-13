@@ -1,6 +1,6 @@
 import {expect, test} from 'vitest'
 import type {ModKey} from "$lib/mods-consts";
-import {searchMods, textToSearch} from "$lib/mod-search";
+import {highlightText, searchMods, textToSearch} from "$lib/mod-search";
 import {MODS, MODS_LIST} from "$lib/mods";
 
 type SearchTest = {
@@ -152,3 +152,26 @@ test('searches', () => {
 	}
 })
 
+
+test('highlightText wraps matches', () => {
+	expect(highlightText('Adds Fire Damage', ['fire'])).toBe('Adds <span class="text-yellow-400">Fire</span> Damage')
+})
+
+test('highlightText does not match inside its own markup', () => {
+	// "a", "class" and "span" would all match inside the inserted span if
+	// phrases were applied one at a time
+	const result = highlightText('Attack Speed', ['attack', 'a', 'class', 'span', 'text', '400'])
+	expect(result).toBe('<span class="text-yellow-400">Attack</span> Speed')
+})
+
+test('highlightText prefers the longest phrase', () => {
+	expect(highlightText('attack speed', ['attack', 'attack speed'])).toBe('<span class="text-yellow-400">attack speed</span>')
+})
+
+test('highlightText treats regex characters literally', () => {
+	expect(highlightText('+1 to Level (max)', ['+1', '('])).toBe('<span class="text-yellow-400">+1</span> to Level <span class="text-yellow-400">(</span>max)')
+})
+
+test('highlightText escapes HTML in the source text', () => {
+	expect(highlightText('a < b', [])).toBe('a &lt; b')
+})

@@ -76,3 +76,9 @@ for (const t of tests) {
 	})
 }
 
+
+test('trade query defaults to Instant Buyout and In Person', () => {
+	const state = urlToAppState('adr=2')
+	const query = getTradeQuery(MODS_LIST, state)
+	expect(query.status.option).toBe('available')
+})
