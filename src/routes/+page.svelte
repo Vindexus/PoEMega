@@ -214,13 +214,14 @@
 	{/if}
 </div>
 <div id="footer" class="fixed bottom-0 z-30 left-0 w-full bg-gray-700 flex justify-center">
-	<section class="max-w-2xl w-full py-3 px-2">
+	<div class="max-w-2xl w-full py-3 px-4 flex items-center justify-between gap-4">
+		<a href="https://watcherseyesearch.com" target="_blank" class="text-sm text-gray-300 hover:text-white hover:underline">WatchersEyeSearch.com</a>
 		{#if numSelectedMods > 0}
-			<a href={tradeLink} target="_blank" class="trade-link">Open Trade Link</a>
+			<a href={tradeLink} target="_blank" class="trade-link shrink-0">Open Trade Link</a>
 		{:else}
-			<button disabled class="trade-link">Open Trade Link</button>
+			<button disabled class="trade-link shrink-0">Open Trade Link</button>
 		{/if}
-	</section>
+	</div>
 </div>
 <style>
 .trade-link {
